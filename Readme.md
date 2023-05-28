@@ -29,6 +29,21 @@ if (!Moment.Moment.IsScheduled(Muscle.Instance.ScheduledEventExecutorId, "losing
     Moment.Moment.ScheduleRelative(Muscle.Instance, new EventRequest((0, 22, 0), "losingMuscle"));
 ```
 
+A class implemented `Moment.IScheduledEventExecutor` is required to schedule events:
+```csharp
+public string ScheduledEventExecutorId => "BAStudio.Muscle";
+public void Execute(TLDDateTime time, string eventType, string? eventId, string? eventData)
+{
+    switch (eventType)
+    {
+        case "losingMuscle":
+            OnCheckLosingMuscle();
+            Moment.Moment.ScheduleRelative(this, new EventRequest((0, Settings.options.shrinkingFreq, 0), "losingMuscle"));
+            break;
+    }
+}
+```
+
 ## Dependencies
 
 - [dommrogers's ModData](https://github.com/dommrogers/ModData/)
