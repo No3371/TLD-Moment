@@ -23,6 +23,12 @@ Or make it happen after some time:
 Moment.Moment.ScheduleRelative(Muscle.Instance, new EventRequest((0, 22, 0), "losingMuscle")); 
 ```
 
+Check if an event is scheduled and schedule one if not:
+```csharp
+if (!Moment.Moment.IsScheduled(Muscle.Instance.ScheduledEventExecutorId, "losingMuscle"))
+    Moment.Moment.ScheduleRelative(Muscle.Instance, new EventRequest((0, 22, 0), "losingMuscle"));
+```
+
 ## Dependencies
 
 - [dommrogers's ModData](https://github.com/dommrogers/ModData/)
