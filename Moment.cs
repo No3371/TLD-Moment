@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using HarmonyLib;
 using Il2Cpp;
 using MelonLoader;
@@ -15,14 +14,14 @@ namespace Moment
         }
         public override void OnInitializeMelon()
         {
+			ModSave = new ModDataManager(nameof(Moment));
 			uConsole.RegisterCommand("moments", new Action(() =>
 			{
 				MelonLogger.Msg(MelonLoader.TinyJSON.Encoder.Encode(scheduledEvents));
 			}));
         }
 		
-		internal ModDataManager ModSave { get; private set; } = new ModDataManager(nameof(Moment));
-		internal MelonLogger.Instance? Logger { get; private set; }
+		internal ModDataManager ModSave { get; private set; }
 		internal bool UpdateNow ()
 		{
 			var now = new TLDDateTime(GameManager.m_TimeOfDay.GetDayNumber(), GameManager.m_TimeOfDay.GetHour(), GameManager.m_TimeOfDay.GetMinutes());
@@ -80,11 +79,11 @@ namespace Moment
 					}
 					if (executors.ContainsKey(ev.ExecutorId))
 					{
-						Moment.Instance.Logger?.Msg($"Executing: {ev.EventUID} at {Now}");
+						Moment.Instance.LoggerInstance?.Msg($"Executing: {ev.EventUID} at {Now}");
 						eventCache.Remove(ev.EventUID);
 						SaveGlobalData.changedSinceLastSave = true;
 						executors[ev.ExecutorId].Execute(Now, ev.EventType, ev.EventId, ev.EventData);
-						Moment.Instance.Logger?.Msg($"Executed : {ev.EventUID} at {Now}");
+						Moment.Instance.LoggerInstance?.Msg($"Executed : {ev.EventUID} at {Now}");
 					}
 				}
 				catch (Exception ex)
@@ -169,6 +168,11 @@ namespace Moment
 		/// </summary>
 		public void ScheduleInternal (IScheduledEventExecutor executor, EventRequest evq)
 		{
+			if (executor?.ScheduledEventExecutorId == null)
+			{
+				Moment.Instance.LoggerInstance?.Error($"Executor {executor} is not identified, can't schedule event.");
+				return;
+			}
 			if (Executing)
 			{
 				pendingToSchedule.Enqueue((executor, evq));
@@ -184,7 +188,7 @@ namespace Moment
 			{
 				scheduledEvents.Add(ev);
 				eventCache[ev.EventUID] = ev;
-				Moment.Instance.Logger?.Msg($"Scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - NowInternal).ToStringRelative()})");
+				// Moment.Instance.LoggerInstance?.Msg($"Scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - NowInternal).ToStringRelative()})");
 			}
 			else
 			{
@@ -195,7 +199,7 @@ namespace Moment
 					{
 						scheduledEvents.Insert(cursor, ev);
 						eventCache[ev.EventUID] = ev;
-						Moment.Instance.Logger?.Msg($"Scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - NowInternal).ToStringRelative()})");
+						// Moment.Instance.LoggerInstance?.Msg($"Scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - NowInternal).ToStringRelative()})");
 						break;
 					}
 
@@ -203,7 +207,7 @@ namespace Moment
 					{
 						scheduledEvents.Add(ev);
 						eventCache[ev.EventUID] = ev;
-						Moment.Instance.Logger?.Msg($"Scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - NowInternal).ToStringRelative()})");
+						// Moment.Instance.LoggerInstance?.Msg($"Scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - NowInternal).ToStringRelative()})");
 						break;
 					}
 					cursor++;
@@ -238,7 +242,7 @@ namespace Moment
 			SaveGlobalData.changedSinceLastSave = true;
 			ev.Cancelled = true;
 			eventCache.Remove(key);
-			Moment.Instance.Logger?.Msg($"Cancelled: {ev.EventUID} at {ev.Time}");
+			Moment.Instance.LoggerInstance?.Msg($"Cancelled: {ev.EventUID} at {ev.Time}");
 			if (Executing) return;
 			scheduledEvents.Remove(ev);
 		}
@@ -294,18 +298,18 @@ namespace Moment
 		internal static void Postfix (string name)
 		{
             bool inGame = Check.InGame;
-			Moment.Instance.Logger?.Msg($"---RestoreGlobalData { SaveGameSystem.m_CurrentGameId }---(InGame: {inGame})");
+			// Moment.Instance.LoggerInstance?.Msg($"---RestoreGlobalData { SaveGameSystem.m_CurrentGameId }---(InGame: {inGame})");
             if (!inGame) return;
 			if (Moment.Instance.scheduledEvents != null) return;
 			Moment.Instance.scheduledEvents = new List<ScheduledEvent>();
 			Moment.Instance.eventCache.Clear();
 			var savedEvents = Moment.Instance.ModSave.Load("events");
-			Moment.Instance.Logger?.Msg($"Decoding: {savedEvents} for game { name }");
+			// Moment.Instance.LoggerInstance?.Msg($"Decoding: {savedEvents} for game { name }");
 			if (savedEvents == null) return;
 			var decodedArr = MelonLoader.TinyJSON.Decoder.Decode(savedEvents) as MelonLoader.TinyJSON.ProxyArray;
 			if (decodedArr == null)
 			{
-				Moment.Instance.Logger?.Error("Failed to decode into array.");
+				Moment.Instance.LoggerInstance?.Error("Failed to decode into array.");
 				return;
 			}
 			foreach (var evDecoded in decodedArr)
@@ -317,7 +321,7 @@ namespace Moment
 				if (Moment.Instance.IsScheduledInternal(ev.ExecutorId, ev.EventType, ev.EventId)) continue;
 				Moment.Instance.scheduledEvents.Add(ev);
 				Moment.Instance.eventCache[ev.EventUID] = ev;
-				Moment.Instance.Logger?.Msg($"Re-scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - Moment.Instance.NowInternal).ToStringRelative()})");
+				// Moment.Instance.LoggerInstance?.Msg($"Re-scheduled: {ev.EventUID} at {ev.Time} ({(ev.Time - Moment.Instance.NowInternal).ToStringRelative()})");
 			}
 		}
 	}
@@ -330,7 +334,7 @@ namespace Moment
 		internal static void Postfix (SlotData slot)
 		{
             bool inGame = Check.InGame;
-			Moment.Instance.Logger?.Msg($"---SaveGlobalData { slot.m_GameId }---(InGame: {inGame})");
+			// Moment.Instance.LoggerInstance?.Msg($"---SaveGlobalData { slot.m_GameId }---(InGame: {inGame})");
             if (!inGame)
 			{
 				return;
@@ -344,7 +348,7 @@ namespace Moment
 			if (!changedSinceLastSave) return;
 
             string data = MelonLoader.TinyJSON.Encoder.Encode(Moment.Instance.scheduledEvents);
-			Moment.Instance.Logger?.Msg($"Encoded: {data}");
+			Moment.Instance.LoggerInstance?.Msg($"Encoded: {data}");
             Moment.Instance.ModSave.Save(data, "events");
             Moment.Instance.ModSave.Save(Moment.Now.TotalMinutes.ToString(), "lastSaved"); // workaround for ModData issue
 			changedSinceLastSave = false;
@@ -356,7 +360,7 @@ namespace Moment
 	{
 		internal static void Postfix ()
 		{
-			// Moment.Instance.Logger?.Msg($"---OnGameQuit---");
+			// Moment.Instance.LoggerInstance?.Msg($"---OnGameQuit---");
 			Moment.Instance.scheduledEvents = null;
 			Moment.Instance.eventCache.Clear();
 		}
@@ -366,7 +370,7 @@ namespace Moment
 	{
 		internal static void Postfix ()
 		{
-			// Moment.Instance.Logger?.Msg($"---HandlePlayerDeath---");
+			// Moment.Instance.LoggerInstance?.Msg($"---HandlePlayerDeath---");
             Moment.Instance.ModSave.Save("", "events"); // workaround for moddata not getting deleted
 			Moment.Instance.scheduledEvents = null;
 			Moment.Instance.eventCache.Clear();
@@ -377,7 +381,7 @@ namespace Moment
 	// {
 	// 	private static void Postfix()
 	// 	{
-	// 		Moment.Instance.Logger?.Msg($"---SaveCompletedInternal---");
+	// 		Moment.Instance.LoggerInstance?.Msg($"---SaveCompletedInternal---");
 	// 	}
 	// }
 }
