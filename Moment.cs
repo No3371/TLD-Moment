@@ -326,6 +326,17 @@ namespace Moment
 		}
 	}
 
+	[HarmonyPatch(typeof(SaveGameSlots), nameof(SaveGameSlots.CreateSlot), new Type[] { typeof(string), typeof(SaveSlotType), typeof(uint), typeof(Episode) })]
+	static class ModData_SaveGameSlots_CreateSaveSlotInfo
+	{
+		[HarmonyPriority(Priority.Last)]
+		private static void Prefix(string slotname, SaveSlotType gameMode, uint gameId, Episode episode)
+		{
+			Moment.Instance.scheduledEvents = new List<ScheduledEvent>();
+			SaveGlobalData.changedSinceLastSave = true;
+		}
+	}
+
     [HarmonyPatch(nameof(SaveGameSystem), nameof(SaveGameSystem.SaveGlobalData))]
 	internal static class SaveGlobalData
 	{
@@ -338,12 +349,6 @@ namespace Moment
             if (!inGame)
 			{
 				return;
-			}
-			if (string.IsNullOrWhiteSpace(Moment.Instance.ModSave.Load("events"))) // First entry
-			{
-				Moment.Instance.Logger?.Msg($"First entry { slot.m_GameId }: {Moment.Instance.ModSave.Load("events")}");
-				Moment.Instance.scheduledEvents = new List<ScheduledEvent>();
-				changedSinceLastSave = true;
 			}
 			if (!changedSinceLastSave) return;
 
