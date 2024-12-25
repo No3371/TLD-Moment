@@ -29,7 +29,7 @@ if (!Moment.Moment.IsScheduled(Muscle.Instance.ScheduledEventExecutorId, "losing
     Moment.Moment.ScheduleRelative(Muscle.Instance, new EventRequest((0, 22, 0), "losingMuscle"));
 ```
 
-A class implemented `Moment.IScheduledEventExecutor` is required to schedule events:
+A class implmenting `Moment.IScheduledEventExecutor` is required to execute scheduled events:
 ```csharp
 public string ScheduledEventExecutorId => "BAStudio.Muscle";
 public void Execute(TLDDateTime time, string eventType, string? eventId, string? eventData)
@@ -37,7 +37,8 @@ public void Execute(TLDDateTime time, string eventType, string? eventId, string?
     switch (eventType)
     {
         case "losingMuscle":
-            OnCheckLosingMuscle();
+            OnCheckLosingMuscle(); // Do you thing
+            // Scehdule again to repeat
             Moment.Moment.ScheduleRelative(this, new EventRequest((0, Settings.options.shrinkingFreq, 0), "losingMuscle"));
             break;
     }
